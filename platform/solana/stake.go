@@ -74,7 +74,7 @@ func (p *Platform) GetDelegations(address string) (blockatlas.DelegationsPage, e
 		if err != nil {
 			return nil, err
 		}
-		if isAuthorized(account, address) {
+		if isDelegatedToAddress(account, address) {
 			stakeAccounts = append(stakeAccounts, account)
 		}
 	}
@@ -102,8 +102,8 @@ func parseStakeData(account Account) (stakeAccount StakeState, err error) {
 	return
 }
 
-func isAuthorized(stakeAccount StakeState, address string) bool {
-	return stakeAccount.AuthorizedStaker == arrayOfPubkey(address)
+func isDelegatedToAddress(stakeAccount StakeState, address string) bool {
+	return stakeAccount.VoterPubkey == arrayOfPubkey(address)
 }
 
 func (p *Platform) UndelegatedBalance(address string) (string, error) {
@@ -126,6 +126,9 @@ func NormalizeDelegations(stakeAccounts []StakeState, validators blockatlas.Vali
 		status := blockatlas.DelegationStatusPending
 		if stakeState.ActivationEpoch > 0 && stakeState.ActivationEpoch <= epochInfo.Epoch {
 			status = blockatlas.DelegationStatusActive
+		}
+		if epochInfo.Epoch > stakeState.DeactivationEpoch {
+			break
 		}
 		delegation := blockatlas.Delegation{
 			Delegator: validator,
